@@ -100,12 +100,12 @@ class RTD_table(object):
         :return: 
         """
         info = ""
-        info += "Table: {:65} #-Shape:{:10}    #-Bytes: {:_>6}\n".format(self.table_name,
+        info += "{:65} #-Shape: {:10}    #-Bytes: {:_>6}\n".format(self.table_name,
                                                                         str(self.to_df().shape),
                                                                         sys.getsizeof(self.to_df()))
 
         for col in self.to_df().columns:
-            info += "    {:69}\n".format(col)
+            info += "    {:69} #-dtype: {:6}\n".format(col,self.to_df()[col].dtype)
 
         return info
 
