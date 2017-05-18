@@ -26,7 +26,7 @@ class RTD(object):
         self.engine = create_engine('sqlite:///{}'.format(self.rtd_file))
 
     def __repr__(self):
-        return '{} instance of datebase: {}'.format(self.__class__, os.path.abspath(self.rtd_file))
+        return '{} instance of database "{}"'.format(self.__class__, os.path.abspath(self.rtd_file))
 
     def list_table_names(self):
         """Return a list of tables in the database
@@ -90,17 +90,30 @@ class RTD_table(object):
         """
         self.RTD = RTD_obj
         self.table_name = table_name
-        self.to_df()
 
     def __repr__(self):
         return '{} instance of table "{}" in {}'.format(self.__class__, self.table_name, self.RTD)
+
+    def info(self):
+        """Information on shape and contents of the table
+        
+        :return: 
+        """
+        info = ""
+        info += "Table: {:65} #-Shape:{:10}    #-Bytes: {:_>6}\n".format(self.table_name,
+                                                                        str(self.to_df().shape),
+                                                                        sys.getsizeof(self.to_df()))
+
+        for col in self.to_df().columns:
+            info += "    {:69}\n".format(col)
+
+        return info
 
     def to_df(self):
         """SQLite table to pandas dataframe
 
         """
-        self.df = pd.read_sql(self.table_name, self.RTD.engine)
-        return self.df
+        return pd.read_sql(self.table_name, self.RTD.engine)
 
     def to_fgdb_table(self, fgdb, out_table):
         """Export to a table in a fgdb
@@ -115,11 +128,10 @@ class RTD_table(object):
 
         # https://my.usgs.gov/confluence/display/cdi/pandas.DataFrame+to+ArcGIS+Table
         # but fails for empty tables
-        if len(self.df.values) > 0:
-            x = np.array(np.rec.fromrecords(self.df.values))
-            names = self.df.dtypes.index.tolist()
+        if len(self.to_df().values) > 0:
+            x = np.array(np.rec.fromrecords(self.to_df().values))
+            names = self.to_df().dtypes.index.tolist()
             x.dtype.names = tuple([str(name) for name in names])
-            print x
         else:
             return None
 
