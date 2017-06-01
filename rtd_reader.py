@@ -21,7 +21,7 @@ class RTD(object):
         """
         self.rtd_file = rtd_file
         if self.rtd_file == None:
-            self.rtd_file = 'data/example1.rtd'
+            self.rtd_file = 'data/example2.rtd'
 
         self.engine = create_engine('sqlite:///{}'.format(self.rtd_file))
 
@@ -142,3 +142,13 @@ class RTD_table(object):
 
         except RuntimeError as e:
             print('Failed to write {} because of this error: {}'.format(out_path, e))
+
+    @property
+    def xml_columns(self):
+        """Check which columns contain xml
+
+        :return:
+        """
+        for col in self.to_df().columns:
+            if 'xml' in str(col).lower():
+                yield col
