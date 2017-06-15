@@ -162,37 +162,32 @@ class RTD_table(object):
         # http://lxml.de/tutorial.html#the-fromstring-function
         return etree.fromstring(xml_str)
 
-    # def get_xyz_from_tag_as_dict(self, tree, tag):
-    #     """
-    #
-    #
-    #     :param tag:
-    #     :return:
-    #     """
-    #     data = {'x': [], 'y': [], 'z': []}
-    #     for element in tree.iter(tag):
-    #         # print("%s = %s" % (element.tag, element.text))
-    #         # print(element.attrib.keys())
-    #         for child in element.iterchildren():
-    #             # for k,v in element.attrib.iteritems():
-    #             # print("\t%s = %s" % (k,v))
-    #             # print(child.tag.split("}")[1], child.text)
-    #             data[child.tag.split("}")[1]].append(float(child.text))
-    #
-    #     # Remove empty keys
-    #     for key in data.keys():
-    #         if len(data[key]) == 0:
-    #             data.pop(key, None)
-    #     return data
+    def get_xyz_from_xml_as_dict(self, tree):
+        """Find x, y, z tags in xml and return a dict of their values
+
+        :return:
+        """
+        data = {'x': [], 'y': [], 'z': []}
+        for element in tree.iter():
+
+            if element.tag.split('}')[1] in ('x', 'y', 'z'):
+                #tag = element.getparent().tag
+                data[element.tag.split("}")[1]].append(float(element.text))
+
+        # Remove empty keys
+        for key in data.keys():
+            if len(data[key]) == 0:
+                data.pop(key, None)
+        return data
 
 if __name__ == '__main__':
     rtd = RTD()
     for tbl in rtd.list_table_names():
         t = RTD_table(rtd,tbl)
-        print(t.info())
+        # print(t.info())
         for xml_col in t.xml_columns:
             print 'xml_col: {}'.format(xml_col)
             for xml_str in t.as_df()[xml_col]:
-                print(xml_str[:50])
+                # print(xml_str[:50])
                 tree = t.xml_str_to_tree(xml_str)
-                print(tree)
+                print(t.get_xyz_from_xml_as_dict(tree))
