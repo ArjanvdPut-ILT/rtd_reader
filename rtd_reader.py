@@ -92,7 +92,9 @@ class RTD_table(object):
         self.table_name = table_name
 
     def __repr__(self):
-        return '{} instance of table "{}" in {}'.format(self.__class__, self.table_name, self.RTD)
+        return '{} instance of table "{}" in {}'.format(self.__class__,
+                                                        self.table_name,
+                                                        self.RTD)
 
     def info(self):
         """Information on shape and contents of the table
@@ -101,16 +103,16 @@ class RTD_table(object):
         """
         info = ""
         info += "{:65} #-Shape: {:10}    #-Bytes: {:_>6}\n".format(self.table_name,
-                                                                        str(self.to_df().shape),
-                                                                        sys.getsizeof(self.to_df()))
+                                                                   str(self.as_df().shape),
+                                                                   sys.getsizeof(self.as_df()))
 
-        for col in self.to_df().columns:
-            info += "    {:69} #-dtype: {:6}\n".format(col,self.to_df()[col].dtype)
+        for col in self.as_df().columns:
+            info += "    {:69} #-dtype: {:6}\n".format(col, self.as_df()[col].dtype)
 
         return info
 
-    def to_df(self):
-        """SQLite table to pandas dataframe
+    def as_df(self):
+        """SQLite table as pandas dataframe
 
         """
         return pd.read_sql(self.table_name, self.RTD.engine)
@@ -128,9 +130,9 @@ class RTD_table(object):
 
         # https://my.usgs.gov/confluence/display/cdi/pandas.DataFrame+to+ArcGIS+Table
         # but fails for empty tables
-        if len(self.to_df().values) > 0:
-            x = np.array(np.rec.fromrecords(self.to_df().values))
-            names = self.to_df().dtypes.index.tolist()
+        if len(self.as_df().values) > 0:
+            x = np.array(np.rec.fromrecords(self.as_df().values))
+            names = self.as_df().dtypes.index.tolist()
             x.dtype.names = tuple([str(name) for name in names])
         else:
             return None
@@ -149,6 +151,48 @@ class RTD_table(object):
 
         :return:
         """
-        for col in self.to_df().columns:
+        for col in self.as_df().columns:
             if 'xml' in str(col).lower():
                 yield col
+
+    def xml_str_to_tree(self, xml_str):
+        """Return etree for xml_str
+        """
+
+        # http://lxml.de/tutorial.html#the-fromstring-function
+        return etree.fromstring(xml_str)
+
+    # def get_xyz_from_tag_as_dict(self, tree, tag):
+    #     """
+    #
+    #
+    #     :param tag:
+    #     :return:
+    #     """
+    #     data = {'x': [], 'y': [], 'z': []}
+    #     for element in tree.iter(tag):
+    #         # print("%s = %s" % (element.tag, element.text))
+    #         # print(element.attrib.keys())
+    #         for child in element.iterchildren():
+    #             # for k,v in element.attrib.iteritems():
+    #             # print("\t%s = %s" % (k,v))
+    #             # print(child.tag.split("}")[1], child.text)
+    #             data[child.tag.split("}")[1]].append(float(child.text))
+    #
+    #     # Remove empty keys
+    #     for key in data.keys():
+    #         if len(data[key]) == 0:
+    #             data.pop(key, None)
+    #     return data
+
+if __name__ == '__main__':
+    rtd = RTD()
+    for tbl in rtd.list_table_names():
+        t = RTD_table(rtd,tbl)
+        print(t.info())
+        for xml_col in t.xml_columns:
+            print 'xml_col: {}'.format(xml_col)
+            for xml_str in t.as_df()[xml_col]:
+                print(xml_str[:50])
+                tree = t.xml_str_to_tree(xml_str)
+                print(tree)
