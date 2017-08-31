@@ -65,6 +65,7 @@ class RTD(object):
             x = np.array(np.rec.fromrecords(df.values))
             names = df.dtypes.index.tolist()
             x.dtype.names = tuple([str(name) for name in names])
+
         else:
             return None
 
@@ -99,8 +100,9 @@ class RTD_table(object):
     def info(self):
         """Information on shape and contents of the table
         
-        :return: 
+        :return:
         """
+        # TODO: check if using pandas info method is a better solution
         info = ""
         info += "{:65} #-Shape: {:10}    #-Bytes: {:_>6}\n".format(self.table_name,
                                                                    str(self.as_df().shape),
@@ -180,14 +182,17 @@ class RTD_table(object):
                 data.pop(key, None)
         return data
 
+
 if __name__ == '__main__':
     rtd = RTD()
     for tbl in rtd.list_table_names():
         t = RTD_table(rtd,tbl)
-        # print(t.info())
-        for xml_col in t.xml_columns:
-            print 'xml_col: {}'.format(xml_col)
-            for xml_str in t.as_df()[xml_col]:
+        print(t.info())
+        #for xml_col in t.xml_columns:
+            #print 'xml_col: {}'.format(xml_col)
+            #for xml_str in t.as_df()[xml_col]:
                 # print(xml_str[:50])
-                tree = t.xml_str_to_tree(xml_str)
-                print(t.get_xyz_from_xml_as_dict(tree))
+                #tree = t.xml_str_to_tree(xml_str)
+                #print((t.get_xyz_from_xml_as_dict(tree).keys()))
+
+    #rtd.export_to_fgdb('C:/Users/arjan/data/Ringtoets/test_exp.gdb')
