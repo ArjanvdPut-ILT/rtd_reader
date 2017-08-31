@@ -52,7 +52,8 @@ class RTD(object):
         """SQLite table to pandas dataframe
     
         """
-        return pd.read_sql(tbl, self.engine)
+        #return pd.read_sql(tbl, self.engine)
+        return pd.read_sql_query('SELECT * FROM {}'.format(tbl), self.engine)
 
     def df_to_table(self, df, out_table):
         """Export a pandas dataframe to a table in a fgdb
@@ -65,6 +66,7 @@ class RTD(object):
             x = np.array(np.rec.fromrecords(df.values))
             names = df.dtypes.index.tolist()
             x.dtype.names = tuple([str(name) for name in names])
+
 
         else:
             return None
@@ -117,7 +119,8 @@ class RTD_table(object):
         """SQLite table as pandas dataframe
 
         """
-        return pd.read_sql(self.table_name, self.RTD.engine)
+        #return pd.read_sql(self.table_name, self.RTD.engine)
+        return pd.read_sql_query('SELECT * FROM {}'.format(self.table_name), self.RTD.engine)
 
     def to_fgdb_table(self, fgdb, out_table):
         """Export to a table in a fgdb
@@ -136,6 +139,7 @@ class RTD_table(object):
             x = np.array(np.rec.fromrecords(self.as_df().values))
             names = self.as_df().dtypes.index.tolist()
             x.dtype.names = tuple([str(name) for name in names])
+
         else:
             return None
 
