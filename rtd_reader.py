@@ -53,7 +53,7 @@ class RTD(object):
     
         """
         #return pd.read_sql(tbl, self.engine)
-        return pd.read_sql_query('SELECT * FROM {}'.format(tbl), self.engine)
+        return pd.read_sql('SELECT * FROM {}'.format(tbl), self.engine)
 
     def df_to_table(self, df, out_table):
         """Export a pandas dataframe to a table in a fgdb
@@ -119,8 +119,11 @@ class RTD_table(object):
         """SQLite table as pandas dataframe
 
         """
-        #return pd.read_sql(self.table_name, self.RTD.engine)
-        return pd.read_sql_query('SELECT * FROM {}'.format(self.table_name), self.RTD.engine)
+
+        return pd.read_sql('SELECT * FROM {}'.format(self.table_name), self.RTD.engine)
+
+        # Statement below does not work in older pandas versions
+        #return pd.read_sql_query('SELECT * FROM {}'.format(self.table_name), self.RTD.engine)
 
     def to_fgdb_table(self, fgdb, out_table):
         """Export to a table in a fgdb
@@ -192,11 +195,11 @@ if __name__ == '__main__':
     for tbl in rtd.list_table_names():
         t = RTD_table(rtd,tbl)
         print(t.info())
-        #for xml_col in t.xml_columns:
+        for xml_col in t.xml_columns:
             #print 'xml_col: {}'.format(xml_col)
-            #for xml_str in t.as_df()[xml_col]:
+            for xml_str in t.as_df()[xml_col]:
                 # print(xml_str[:50])
-                #tree = t.xml_str_to_tree(xml_str)
+                tree = t.xml_str_to_tree(xml_str)
                 #print((t.get_xyz_from_xml_as_dict(tree).keys()))
 
-    #rtd.export_to_fgdb('C:/Users/arjan/data/Ringtoets/test_exp.gdb')
+    rtd.export_to_fgdb('C:/Users/arjan/data/Ringtoets/test_exp.gdb')
