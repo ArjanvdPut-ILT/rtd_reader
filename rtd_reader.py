@@ -37,6 +37,14 @@ class RTD(object):
             result = connection.execute("select name from sqlite_master where type = 'table';").fetchall()
             return [item.name for item in result]
 
+    def list_columns(self, table_name):
+        """Return a list of columns in a table
+
+        """
+        with self.engine.connect() as connection:
+            result = connection.execute('SELECT * FROM {}'.format(table_name))
+            return result.keys()
+
     def export_to_fgdb(self, fgdb):
         """Export all tables to an esri filegeodatabase
     
