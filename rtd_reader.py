@@ -35,6 +35,23 @@ class RTD(object):
             result = connection.execute("select name from sqlite_master where type = 'table';").fetchall()
             return [item.name for item in result]
 
+    def table_info(self, table_name):
+        """Information on shape and contents of the table
+
+        :return:
+        """
+        # TODO: check if using pandas info method is a better solution
+        df = self.table_to_df(table_name)
+        info = ""
+        info += "{:65} #-Shape: {:10}    #-Bytes: {:_>6}\n".format(table_name,
+                                                                   str(df.shape),
+                                                                   sys.getsizeof(df))
+
+        for col in df.columns:
+            info += "    {:69} #-dtype: {:6}\n".format(col, df[col].dtype)
+
+        return info
+
     def list_columns(self, table_name):
         """Return a list of columns in a table
 
