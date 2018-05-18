@@ -2,8 +2,6 @@ import sys
 from sqlalchemy import create_engine
 from lxml import etree
 import pandas as pd
-import arcpy
-import numpy as np
 import os.path
 
 
@@ -45,47 +43,12 @@ class RTD(object):
             result = connection.execute('SELECT * FROM {}'.format(table_name))
             return result.keys()
 
-    def export_to_fgdb(self, fgdb):
-        """Export all tables to an esri filegeodatabase
-    
-        """
-        if not arcpy.Exists(fgdb):
-            arcpy.CreateFileGDB_management(os.path.split(fgdb)[0], os.path.split(fgdb)[1])
-
-        for table in self.list_table_names():
-            df = self.table_to_df(table)
-            self.df_to_table(df, fgdb + "/" + str(table))
-
     def table_to_df(self, tbl):
         """SQLite table to pandas dataframe
     
         """
         #return pd.read_sql(tbl, self.engine)
         return pd.read_sql('SELECT * FROM {}'.format(tbl), self.engine)
-
-    def df_to_table(self, df, out_table):
-        """Export a pandas dataframe to a table in a fgdb
-    
-        """
-
-        # https://my.usgs.gov/confluence/display/cdi/pandas.DataFrame+to+ArcGIS+Table
-        # but fails for empty tables
-        if len(df.values) > 0:
-            x = np.array(np.rec.fromrecords(df.values))
-            names = df.dtypes.index.tolist()
-            x.dtype.names = tuple([str(name) for name in names])
-
-
-        else:
-            return None
-
-        try:
-            arcpy.da.NumPyArrayToTable(x, out_table)
-            return out_table
-
-        except RuntimeError:
-            e = sys.exc_info()[1]
-            print('Failed to write {} because of this error: {}'.format(out_table, e))
 
 
 class RTD_table(object):
@@ -132,35 +95,6 @@ class RTD_table(object):
 
         # Statement below does not work in older pandas versions
         #return pd.read_sql_query('SELECT * FROM {}'.format(self.table_name), self.RTD.engine)
-
-    def to_fgdb_table(self, fgdb, out_table):
-        """Export to a table in a fgdb
-        
-        :param fgdb: path to filegeodatabase
-        :param out_table: name of output table
-        :return: path to created table
-        """
-
-        #if not hasattr(self,'df'):
-        #    self.to_df()
-
-        # https://my.usgs.gov/confluence/display/cdi/pandas.DataFrame+to+ArcGIS+Table
-        # but fails for empty tables
-        if len(self.as_df().values) > 0:
-            x = np.array(np.rec.fromrecords(self.as_df().values))
-            names = self.as_df().dtypes.index.tolist()
-            x.dtype.names = tuple([str(name) for name in names])
-
-        else:
-            return None
-
-        out_path = os.path.join(fgdb, out_table)
-        try:
-            arcpy.da.NumPyArrayToTable(x, out_path)
-            return out_path
-
-        except RuntimeError as e:
-            print('Failed to write {} because of this error: {}'.format(out_path, e))
 
     @property
     def xml_columns(self):
@@ -209,5 +143,3 @@ if __name__ == '__main__':
                 # print(xml_str[:50])
                 tree = t.xml_str_to_tree(xml_str)
                 #print((t.get_xyz_from_xml_as_dict(tree).keys()))
-
-    rtd.export_to_fgdb('C:/Users/arjan/data/Ringtoets/test_exp.gdb')
