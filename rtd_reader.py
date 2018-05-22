@@ -4,7 +4,8 @@ from sqlalchemy import create_engine
 from lxml import etree
 import pandas as pd
 import geopandas as gpd
-from shapely.geometry import Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
+from shapely.geometry import MultiPoint, LineString, Polygon
+
 
 class RTD(object):
     """A RingToets SQLite database
@@ -77,12 +78,13 @@ class RTD(object):
         gdf = gpd.GeoDataFrame(self.table_to_df(table_name))
 
         for col in self.list_geo_xml_columns(table_name):
-            geo_column_name = col +'_geo'
+            geo_column_name = col + '_geo'
             gdf[geo_column_name] = gdf[col].apply(xml_to_geometry, geotype=geotype)
 
         gdf.set_geometry(geo_column_name, inplace=True)
 
         return gdf
+
 
 def xml_str_to_tree(xml_str):
     """Return etree for xml_str
