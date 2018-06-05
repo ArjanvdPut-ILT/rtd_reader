@@ -4,13 +4,12 @@ from sqlalchemy import create_engine
 from lxml import etree
 import pandas as pd
 import geopandas as gpd
-from shapely.geometry import MultiPoint, LineString, Polygon
+from shapely.geometry import MultiPoint, LineString, Polygon, Point
 
 
 class RTD(object):
     """A RingToets SQLite database
 
-    <More elaborate doc>
     """
 
     def __init__(self, rtd_file):
@@ -47,7 +46,7 @@ class RTD(object):
                                                                    sys.getsizeof(df))
 
         for col in df.columns:
-            info += "    {:69} #-dtype: {:6}\n".format(col, df[col].dtype)
+            info += "    {:69} #-dtype: {:6}\n".format(col, str(df[col].dtype))
 
         return info
 
@@ -81,6 +80,7 @@ class RTD(object):
             geo_column_name = col + '_geo'
             gdf[geo_column_name] = gdf[col].apply(xml_to_geometry, geotype=geotype)
 
+        # Set geometry to last added column
         gdf.set_geometry(geo_column_name, inplace=True)
 
         return gdf
@@ -88,6 +88,7 @@ class RTD(object):
 
 def xml_str_to_tree(xml_str):
     """Return etree for xml_str
+
     """
 
     return etree.fromstring(xml_str)
@@ -98,30 +99,42 @@ def get_xyz_from_xml_as_dict(tree):
 
     :return:
     """
-    data = {'x': [], 'y': [], 'z': []}
-    for element in tree.iter():
+    xml_geom_type = tree.tag.split('}')[1]
 
-        if element.tag.split('}')[1] in ('x', 'y', 'z'):
-            # tag = element.getparent().tag
-            data[element.tag.split("}")[1]].append(float(element.text))
+    if xml_geom_type == 'ArrayOfPoint3DXmlSerializer.SerializablePoint3D':
+        data = get_tags_from_xml_tree(tree, tags=('x','y','z'))
 
-    # Remove empty keys
-    for key in data.keys():
-        if len(data[key]) == 0:
-            data.pop(key, None)
+    elif xml_geom_type == 'ArrayOfPoint2DXmlSerializer.SerializablePoint2D':
+        data = get_tags_from_xml_tree(tree, tags=('x', 'y'))
+
+    else:
+        data = get_tags_from_xml_tree(tree, tags=('x', 'y'))
+
     return data
 
 
-def xml_to_geometry(xml_str, geotype=None):
-    """Turn xml string into shapely geometry
+def get_tags_from_xml_tree(tree, tags=('x','y')):
+    """Extract given tags from xml
 
     """
+    data = {tag: [] for tag in tags}
 
+    for element in tree.iter():
+
+        if element.tag.split('}')[1] in tags:
+            data[element.tag.split("}")[1]].append(float(element.text))
+
+    return data
+
+
+def xml_to_geometry(xml_str, geotype='line'):
+    """Turn xml string into shapely geometry
+
+    geotype::   'point'|'line'|'polygon'
+    """
     tree = xml_str_to_tree(xml_str)
     xyz_dict = get_xyz_from_xml_as_dict(tree)
-    coords = zip(xyz_dict['x'], xyz_dict['y'])
-    # TODO: determine geometrytype (point, line, polygon) and act accordingly
-    # TODO: z values
+    coords = list(zip(*(xyz_dict[key] for key in xyz_dict.keys())))
 
     if geotype == 'line':
         geometry = LineString(coords)
