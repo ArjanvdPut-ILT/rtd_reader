@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 from lxml import etree
 import pandas as pd
 import geopandas as gpd
+import fiona
 from shapely.geometry import MultiPoint, LineString, Polygon, Point
 
 
@@ -38,7 +39,6 @@ class RTD(object):
 
         :return:
         """
-        # TODO: check if using pandas info method is a better solution
         df = self.table_to_df(table_name)
         info = ""
         info += "{:65} #-Shape: {:10}    #-Bytes: {:_>6}\n".format(table_name,
@@ -47,6 +47,8 @@ class RTD(object):
 
         for col in df.columns:
             info += "    {:69} #-dtype: {:6}\n".format(col, str(df[col].dtype))
+            if col in self.list_geo_xml_columns(table_name):
+                info += "    --> xml geom type = {}\n".format(self.xml_geom_type(table_name, col))
 
         return info
 
@@ -64,26 +66,39 @@ class RTD(object):
         """
         return [col for col in self.list_columns(table_name) if col.lower().endswith('xml')]
 
+    def xml_geom_type(self, table_name, column_name):
+        """Return geometry type for column_name in table_name
+
+        """
+        df = self.table_to_df(table_name)
+
+        if df.shape[0] == 0:
+            return 'No records to determine geometry type'
+
+        return get_xml_geom_type(xml_str_to_tree(df[column_name][0]))
+
     def table_to_df(self, tbl):
         """SQLite table to pandas dataframe
     
         """
         return pd.read_sql('SELECT * FROM {}'.format(tbl), self.engine)
 
-    def table_to_geodf(self, table_name, geotype='point'):
+    def table_to_geodf(self, table_name, column_name, geotype):
         """Return a table as geopandas GeoDataframe
 
         """
         gdf = gpd.GeoDataFrame(self.table_to_df(table_name))
 
-        for col in self.list_geo_xml_columns(table_name):
-            geo_column_name = col + '_geo'
-            gdf[geo_column_name] = gdf[col].apply(xml_to_geometry, geotype=geotype)
+        geo_column_name = column_name + '_geo'
+        gdf[geo_column_name] = gdf[column_name].apply(xml_to_geometry, geotype=geotype)
 
         # Set geometry to last added column
-        gdf.set_geometry(geo_column_name, inplace=True)
+        #gdf.set_geometry(geo_column_name, inplace=True)
 
-        return gdf
+        # Set RD_New as CRS
+        gdf.crs = fiona.crs.from_epsg(28992)
+
+        return gdf.set_geometry(geo_column_name)
 
 
 def xml_str_to_tree(xml_str):
@@ -92,6 +107,12 @@ def xml_str_to_tree(xml_str):
     """
 
     return etree.fromstring(xml_str)
+
+def get_xml_geom_type(tree):
+    """Get xml geometry type from xml tree
+
+    """
+    return tree.tag.split('}')[1]
 
 
 def get_xyz_from_xml_as_dict(tree):
@@ -106,6 +127,9 @@ def get_xyz_from_xml_as_dict(tree):
 
     elif xml_geom_type == 'ArrayOfPoint2DXmlSerializer.SerializablePoint2D':
         data = get_tags_from_xml_tree(tree, tags=('x', 'y'))
+
+    elif xml_geom_type == 'ArrayOfRoughnessPointXmlSerializer.SerializableRoughnessPoint':
+        data = get_tags_from_xml_tree(tree, tags=('x', 'y', 'roughness'))
 
     else:
         data = get_tags_from_xml_tree(tree, tags=('x', 'y'))
@@ -127,18 +151,28 @@ def get_tags_from_xml_tree(tree, tags=('x','y')):
     return data
 
 
-def xml_to_geometry(xml_str, geotype='line'):
-    """Turn xml string into shapely geometry
+def coords_from_xml(xml_str):
+    """Return a list of coordinates extracted from xml_string
 
-    geotype::   'point'|'line'|'polygon'
     """
     tree = xml_str_to_tree(xml_str)
     xyz_dict = get_xyz_from_xml_as_dict(tree)
-    coords = list(zip(*(xyz_dict[key] for key in xyz_dict.keys())))
+
+    return list(zip(*(xyz_dict[key] for key in sorted(xyz_dict.keys()))))
+
+
+def xml_to_geometry(xml_str, geotype):
+    """Turn xml string into shapely geometry
+
+    geotype::   'point'|'line'|'multipoint'|'polygon'
+    """
+    coords = coords_from_xml(xml_str)
 
     if geotype == 'line':
         geometry = LineString(coords)
     elif geotype == 'point':
+        geometry = MultiPoint(coords)
+    elif geotype == 'multipoint':
         geometry = MultiPoint(coords)
     elif geotype == 'polygon':
         geometry = Polygon(coords)
@@ -149,4 +183,4 @@ def xml_to_geometry(xml_str, geotype='line'):
 
 
 if __name__ == '__main__':
-   pass
+    pass
